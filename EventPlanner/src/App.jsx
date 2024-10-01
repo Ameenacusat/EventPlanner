@@ -10,7 +10,7 @@ function App() {
   return (
     <>
       <ChakraProvider>
-        
+        <Landing/>
         <MyEvents/>
       </ChakraProvider>
      
