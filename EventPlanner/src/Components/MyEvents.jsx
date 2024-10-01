@@ -1,6 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState,useRef } from 'react'
 import axios from 'axios';
 import { db } from './Firebase/Firestore';
+
+import Map from 'ol/Map.js';
+import View from 'ol/View.js';
+import TileLayer from 'ol/layer/Tile.js';
+import OSM from 'ol/source/OSM.js';
+
 import {
     Box, 
     Button, 
@@ -15,7 +21,8 @@ import {
     ModalCloseButton,
     FormControl,
     FormLabel,
-    Input
+    Input,
+    Text
 } from '@chakra-ui/react'
 import {
     collection,
@@ -30,76 +37,81 @@ import {
     addDoc
   } from 'firebase/firestore';
   import { v4 as uuidv4 } from 'uuid';
+import { map } from './Maps';
+import { toLonLat, fromLonLat } from 'ol/proj';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import Feature from 'ol/Feature';
+import Point from 'ol/geom/Point';
+import { Icon, Style } from 'ol/style';
 
 
 const MyEvents = () => {
-    const [mapData, setMapData] = useState(null);
-    const [error, setError] = useState(null);
-    const [mapUuid, setMapUuid] = useState('');
-    const [mapTitle, setMapTitle] = useState('');
-    const [mapDescription, setMapDescription] = useState('');
-   
-       
-      
-        // Function to create a new map
-        const createMap = async () => {
-          const newMapUuid = uuidv4(); // Generate a new UUID
-          const newMapData = {
-            slug: newMapUuid,
-            title: mapTitle,
-            description: mapDescription,
-            privacy: "public",
-            users_can_create_markers: "yes",
-            options: null,
-            uuid: newMapUuid,
-            // created_at: new Date().toISOString(),
-            //updated_at: new Date().toISOString(),
-            //image: "/images/new-map.png",
-            /*categories: [
-              { id: 1, name: "Category 1", icon: "/images/icon1.svg", markers_count: 0 },
-            ],*/
-          };
-      
-          try {
-            const response = await axios.post('/api/maps', newMapData);
-            console.log('Map created successfully:', response.data);
-            setMapUuid(newMapUuid); // Store the UUID of the created map
-          } catch (error) {
-            console.error('Error creating map:', error);
-            setError(error);
-          }
-        };
-    
-        const fetchMap = async (uuid) => {
-            try {
-              const response = await axios.get(`/api/maps/${uuid}`);
-              setMapData(response.data);
-            } catch (error) {
-              console.error('Error fetching map:', error);
-              setError(error);
-            }
-          };
-        useEffect(() => {
-            if (mapUuid) {
-              fetchMap(mapUuid);
-            }
-          }, [mapUuid]);
+  
     const [Events, setEvents] = useState([]);
     const [Name,setName] = useState(null);
     const [Date,setDate] = useState(null);
+    const [coordinates, setCoordinates] = useState(null);
     //const [error, setError] = useState(null);
-    const { isOpen, onOpen, onClose } = useDisclosure();
+    const [secondModal,setSecondModal] = useState(false)
+    const { isOpen: isFirstModalOpen, onOpen: onOpenFirstModal, onClose: onCloseFirstModal } = useDisclosure();
+    const { isOpen: isSecondModalOpen, onOpen: onOpenSecondModal, onClose: onCloseSecondModal } = useDisclosure();
     const initialRef = React.useRef(null);
     const finalRef = React.useRef(null);
-    
+    console.log(isSecondModalOpen)
     const HandleAddEvents = () => {
-        onOpen();
+      onOpenFirstModal();
     }
     console.log(Events)
+    console.log(coordinates)
+      // Initialize the map once
+    // Dynamically set the map target to the DOM element after the component mounts
+  useEffect(()=>{
+    console.log("nro")
+    const func = () => {
+      map.setTarget('map')
+      const markerSource = new VectorSource();
+      const markerLayer = new VectorLayer({
+        source: markerSource,
+        style: new Style({
+          image: new Icon({
+            src: 'https://openlayers.org/en/v6.5.0/examples/data/icon.png', // Example marker icon
+            anchor: [0.5, 1],
+          }),
+        }),
+      },[isSecondModalOpen]);
+      map.addLayer(markerLayer);
+
+      map.on('dblclick', (event) => {
+        const coordinates = event.coordinate;
+        const lonLat = toLonLat(coordinates);
+        console.log('Coordinates:', lonLat);
+        setCoordinates(lonLat); // Update the state with the new coordinates
+
+        const marker = new Feature(new Point(coordinates));
+        markerSource.clear(); // Remove previous markers
+        markerSource.addFeature(marker);
+        //setStatus(false)
+      });
+
+      {/*return () => {
+        map.setTarget(null);
+      };*/
+      }
+      }
+    
+    setTimeout(func,3000)
+
+    
+  },[secondModal])
+      
+ 
+    
+
     const HandleModalSubmit=()=>{
 
         //setEvents(value);
-        onClose();
+        onCloseFirstModal()
         const date = Date.slice(0, 10);  
         console.log(date);
         const time = Date.slice(11,16);
@@ -114,15 +126,18 @@ const MyEvents = () => {
              
             },
           ]);
-          createMap()
+          //createMap()
           
         
         const docRef = collection(db,'Database',`abhishekkrishnan2006@gmail.com`,`${Name}`)
         try {
             addDoc(docRef,{
                 Date:date,
-                Time:time
+                Time:time,
+                Latitude:coordinates[0],
+                Longitude:coordinates[1],
             })
+
           } catch (error) {
             console.log(error)
           }
@@ -139,38 +154,40 @@ const MyEvents = () => {
         alignItems="center"
     >
         <Box
-            h="650px"
-            w="100%"
+          w="100%"
+          display="flex"
+          flexDirection="colmn"
+          alignItems="center"
+          h="650px"
+
+          
         >
-            <Box>
-                <img
-                    src={mapData?.image}
-                >
-                </img>
-            </Box>
+         
         </Box>
         <Box
             w="100%"
             display="flex"
-            flexDirection="row"
+            flexDirection="colmn"
             alignItems="center"
             justifyContent="flex-end"
             p="10px"
             pr = "20px" 
         >
-            <Button 
-                colorScheme='teal' 
-                size='md'
-                onClick = {HandleAddEvents}
+         
+        
+          <Button 
+              colorScheme='teal' 
+              size='md'
+              onClick = {HandleAddEvents}
 
-            >
-                Add Events
-            </Button>
-            <Modal
-               
-                isOpen={isOpen}
-                onClose={onClose}
-            >
+          >
+              Add Events
+          </Button>
+          <Modal
+              
+              isOpen={isFirstModalOpen}
+              onClose={ onCloseFirstModal}
+          >
             <ModalOverlay />
             <ModalContent>
             <ModalHeader>Create your Event</ModalHeader>
@@ -185,21 +202,113 @@ const MyEvents = () => {
                 <FormLabel>Date & Time</FormLabel>
                 <Input placeholder='Select Date and Time' size='md' type='datetime-local' onChange={(e)=>{setDate(e.target.value)}}/>
                 </FormControl>
+                <FormControl mt={4}>
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                >
+                  <Box
+                    w="300px"
+                    h="100px"
+                    display="flex"
+                    flexDirection="column"
+                    
+                    justifyContent="flex-start"
+
+                  >
+                    <Text
+                      w='100%'
+                      mb={4}
+                      mt={4}
+                    >
+                      Latitude:{coordinates?.[0]}
+                    </Text>
+                    <Text
+                       w='100%'
+                    >
+                      Longitude:{coordinates?.[1]}
+                    </Text>
+                  </Box>
+                  <Button 
+                    colorScheme='teal' 
+                    variant='outline'
+                    onClick={()=>{
+                      
+                      //handleMap()
+                      setSecondModal(true)
+                      onOpenSecondModal()
+                    }}
+                  >
+                    Add Location
+                  </Button>
+                </Box>
+                
+                </FormControl>
             </ModalBody>
 
             <ModalFooter>
                 <Button 
                     colorScheme='blue' 
                     mr={3}
-                    onClick={HandleModalSubmit}
+                    onClick={()=>{
+                      HandleModalSubmit()
+                      setStatus(false)
+                    }}
                 >
 
                 Save
                 </Button>
-                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={ onCloseFirstModal}>Cancel</Button>
             </ModalFooter>
             </ModalContent>
-        </Modal>
+          </Modal>
+            
+          <Modal
+              isOpen={isSecondModalOpen}
+              onClose={ onCloseSecondModal}
+              
+            >
+            <ModalOverlay />
+            <ModalContent
+              w="600px"
+            >
+              <ModalHeader>Location</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody
+                pb={6}
+                >
+                 <Box
+                  h="450px"
+                  w="100%"
+                >
+                  <Box 
+                    id = "map"
+                    w="100%"
+                    h="450px"
+                  >
+                      
+                  </Box>
+                </Box>
+              </ModalBody>
+
+              <ModalFooter
+                
+              >
+                <Button 
+                colorScheme='blue' 
+                mr={3}
+                onClick={ ()=>{
+                  onCloseSecondModal()
+                  
+                }}
+                >
+                  Save
+                </Button>
+                <Button onClick={ onCloseSecondModal}>Cancel</Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
         </Box>
        
     </Box>
