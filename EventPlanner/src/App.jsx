@@ -13,9 +13,8 @@ function App() {
         <Landing/>
         <MyEvents/>
       </ChakraProvider>
-     
     </>
   )
 }
 
-export default App
+export default App;
