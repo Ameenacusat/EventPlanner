@@ -54,6 +54,7 @@ const MyEvents = () => {
     const [coordinates, setCoordinates] = useState(null);
     //const [error, setError] = useState(null);
     const [secondModal,setSecondModal] = useState(false)
+    const mapRef = useRef(null); // Create a ref to store the map instance
     const { isOpen: isFirstModalOpen, onOpen: onOpenFirstModal, onClose: onCloseFirstModal } = useDisclosure();
     const { isOpen: isSecondModalOpen, onOpen: onOpenSecondModal, onClose: onCloseSecondModal } = useDisclosure();
     const initialRef = React.useRef(null);
@@ -66,57 +67,67 @@ const MyEvents = () => {
     console.log(coordinates)
       // Initialize the map once
     // Dynamically set the map target to the DOM element after the component mounts
-  useEffect(()=>{
-    const keralaCoordinates = fromLonLat([76.2711, 10.8505]);
-    const map = new Map({
-      view: new View({
+    useEffect(() => {
+      // Initialize the map only once when the component mounts
+      const keralaCoordinates = fromLonLat([76.2711, 10.8505]);
+      const map = new Map({
+        view: new View({
           center: keralaCoordinates,
-          zoom: 5, // Adjust the zoom level as needed
+          zoom: 5,
         }),
         layers: [
           new TileLayer({
             source: new OSM(),
           }),
         ],
-        target:null, // This will be set dynamically in the component
+        target: null, // Dynamically set later
       });
-
-
-      console.log("ho")
-    const func = () => {
-
-      map.setTarget('map')
+      mapRef.current = map;
+      // Create a layer for markers
       const markerSource = new VectorSource();
       const markerLayer = new VectorLayer({
         source: markerSource,
         style: new Style({
           image: new Icon({
-            src: 'https://openlayers.org/en/v6.5.0/examples/data/icon.png', // Example marker icon
+            src: 'https://openlayers.org/en/v6.5.0/examples/data/icon.png',
             anchor: [0.5, 1],
           }),
         }),
-      },[isSecondModalOpen]);
+      });
       map.addLayer(markerLayer);
-
+    
+      // Handle map clicks for adding markers
       map.on('dblclick', (event) => {
         const coordinates = event.coordinate;
         const lonLat = toLonLat(coordinates);
         console.log('Coordinates:', lonLat);
         setCoordinates(lonLat); // Update the state with the new coordinates
-
+    
         const marker = new Feature(new Point(coordinates));
         markerSource.clear(); // Remove previous markers
         markerSource.addFeature(marker);
-        //setStatus(false)
       });
-
-      
+    
+      // Clean up the map on component unmount
+      return () => {
+        map.setTarget(null); // Removes the map on unmount
+      };
+    }, []);
+    
+    useEffect(() => {
+      if (isSecondModalOpen) {
+        // When the modal opens, set the map target
+        setTimeout(() => {
+          const mapElement = document.getElementById('map');
+          if (mapElement && mapRef.current) {
+            mapRef.current.setTarget('map');
+          }
+        }, 0); // Ensure the modal content is rendered before setting the target
+      } else if (mapRef.current) {
+        // When the modal closes, remove the map target
+        mapRef.current.setTarget(null);
       }
-    
-    func()
-      
-    
-  },[secondModal])
+    }, [isSecondModalOpen]);
       
  
     
