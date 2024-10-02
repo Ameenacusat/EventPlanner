@@ -8,7 +8,7 @@ import { fromLonLat } from 'ol/proj';
 const keralaCoordinates = fromLonLat([76.2711, 10.8505]);
    
 
-export const map = new Map({
+const map = new Map({
     view: new View({
         center: keralaCoordinates,
         zoom: 5, // Adjust the zoom level as needed

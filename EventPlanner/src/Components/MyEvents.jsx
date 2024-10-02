@@ -37,7 +37,7 @@ import {
     addDoc
   } from 'firebase/firestore';
   import { v4 as uuidv4 } from 'uuid';
-import { map } from './Maps';
+//import { map } from './Maps';
 import { toLonLat, fromLonLat } from 'ol/proj';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
@@ -67,8 +67,24 @@ const MyEvents = () => {
       // Initialize the map once
     // Dynamically set the map target to the DOM element after the component mounts
   useEffect(()=>{
-    console.log("nro")
+    const keralaCoordinates = fromLonLat([76.2711, 10.8505]);
+    const map = new Map({
+      view: new View({
+          center: keralaCoordinates,
+          zoom: 5, // Adjust the zoom level as needed
+        }),
+        layers: [
+          new TileLayer({
+            source: new OSM(),
+          }),
+        ],
+        target:null, // This will be set dynamically in the component
+      });
+
+
+      console.log("ho")
     const func = () => {
+
       map.setTarget('map')
       const markerSource = new VectorSource();
       const markerLayer = new VectorLayer({
@@ -94,14 +110,11 @@ const MyEvents = () => {
         //setStatus(false)
       });
 
-      {/*return () => {
-        map.setTarget(null);
-      };*/
-      }
+      
       }
     
-    setTimeout(func,3000)
-
+    func()
+      
     
   },[secondModal])
       
