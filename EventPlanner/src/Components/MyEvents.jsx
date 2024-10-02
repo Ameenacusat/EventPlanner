@@ -176,6 +176,7 @@ const MyEvents = () => {
         display="flex"
         flexDirection="column"
         alignItems="center"
+        
     >
         <Box
           w="100%"
